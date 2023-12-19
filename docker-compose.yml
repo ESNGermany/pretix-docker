@@ -6,30 +6,45 @@ services:
     container_name: pretix
     restart: unless-stopped
     command: all
-    env_file: .env
+    ports:
+      - "8676:80"
     volumes:
-      - ./pretix:/data
-      - ./pretix.cfg:/etc/pretix/pretix.cfg:ro
+      - ./data:/data
+      - ./pretix.cfg:/etc/pretix/pretix.cfg
     depends_on:
       - db
-      - cache
+      - redis
     networks:
       - pretix_net
-      - proxy_net
+ #     - proxy_net
 
   db:
-    image: postgres:14-alpine
+    image: postgres:16.0-alpine
     container_name: pretix_db
     restart: unless-stopped
-    env_file: .env
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/secret
+      - POSTGRES_USER=pretix
+      - POSTGRES_DB=pretix
+    secrets:
+      - secret
     volumes:
       - ./db:/var/lib/postgresql/data
     networks:
       - pretix_net
 
+  redis:
+    image: redis:7-alpine
+    container_name: pretix_cache
+    restart: unless-stopped
+    networks:
+      - pretix_net
+
 networks:
   pretix_net:
-  proxy_net:
-    external: true
+#  proxy_net:
+#    external: true
 
-
+secrets:
+  secret:
+    file: secret.txt
