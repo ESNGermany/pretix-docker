@@ -1,22 +1,13 @@
-FROM pretix/standalone:2023.7
+FROM pretix/standalone:2023.10.0
 USER root
 # ZUGFeRD is a German standard allowing to embed structured data in PDF>
 RUN pip3 install pretix-zugferd
-# Allows you to receive payments via SEPA direct debit. Users will be a>
-RUN pip3 install pretix-sepadebit
-# Allows you to receive payments via Klarna's Sofort service
-RUN pip3 install pretix-sofort
-# Enables you to charge a flat service fee on all orders
-RUN pip3 install pretix-servicefees
-# Create static content pages. You can use this to add information abou>
-RUN pip3 install pretix-pages
-# Adds a number of free fonts 
-RUN pip3 install pretix-fontpack-free
-# Allows you to receive Bitcoin payments via BitPay or BTCPay Server
-RUN pip3 install pretix-bitpay
-# Automatic logging of bounces on pretix-level
-RUN pip3 install pretix-bounces
+# Additional Payment Methods
+RUN pip3 install pretix-sofort pretix-bitpay
+# Additional Pretix Features
+RUN pip3 install pretix-servicefees pretix-pages pretix-fontpack-free pretix-bounces
+RUN pip3 install pretix-passbook
 # Third party: Authentication backend for CAS SSO servers
-RUN pip3 install pretix-cas
+#RUN pip3 install pretix-cas
 USER pretixuser
 RUN cd /pretix/src && make production
