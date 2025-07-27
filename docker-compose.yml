@@ -1,50 +1,49 @@
-version: '3.5'
-
 services:
-  pretix:
-    build: .
-    container_name: pretix
-    restart: unless-stopped
+  app:
+    build: ./app
     command: all
     ports:
       - "8676:80"
-    volumes:
-      - ./data:/data
-      - ./pretix.cfg:/etc/pretix/pretix.cfg
-    depends_on:
-      - db
-      - redis
-    networks:
-      - pretix_net
- #     - proxy_net
-
-  db:
-    image: postgres:16.0-alpine
-    container_name: pretix_db
-    restart: unless-stopped
     environment:
-      - POSTGRES_PASSWORD_FILE=/run/secrets/secret
-      - POSTGRES_USER=pretix
-      - POSTGRES_DB=pretix
-    secrets:
-      - secret
+      - PRETIX_PRETIX_URL=${URL}
+      - PRETIX_DATABASE_NAME=${DATABASE_NAME}
+      - PRETIX_DATABASE_USER=${DATABASE_USER}
+      - PRETIX_DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - PRETIX_MAIL_FROM=${MAIL_ADDRESS}
+      - PRETIX_MAIL_HOST=${MAIL_HOST}
+      - PRETIX_MAIL_USER=${MAIL_USER}
+      - PRETIX_MAIL_PASSWORD=${MAIL_PASSWORD}
+      - PRETIX_MAIL_PORT=${MAIL_PORT}
+      - PRETIX_MAIL_TLS=${MAIL_TLS}
+      - PRETIX_METRICS_USER=${METRICS_USER}
+      - PRETIX_METRICS_PASSPHRASE=${METRICS_PASSWORD}
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - ./app/data:/data
+      - ./app/pretix.cfg:/etc/pretix/pretix.cfg
     networks:
-      - pretix_net
+      - pretix
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16.0-alpine
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+    networks:
+      - pretix
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: pretix_cache
-    restart: unless-stopped
     networks:
-      - pretix_net
+      - pretix
+    restart: unless-stopped
 
 networks:
-  pretix_net:
-#  proxy_net:
-#    external: true
-
-secrets:
-  secret:
-    file: secret.txt
+  pretix:
