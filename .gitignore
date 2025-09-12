@@ -1,3 +1,5 @@
 /app/data/
+!/app/data/.gitkeep
 /db/data/
+/traefik/data/
 .env

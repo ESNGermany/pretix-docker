@@ -1,38 +1,62 @@
+x-pretix-environment: &pretix-environment
+  PRETIX_DATABASE_NAME: ${DATABASE_NAME}
+  PRETIX_DATABASE_USER: ${DATABASE_USER}
+  PRETIX_DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+  PRETIX_MAIL_FROM: ${MAIL_ADDRESS}
+  PRETIX_MAIL_HOST: ${MAIL_HOST}
+  PRETIX_MAIL_USER: ${MAIL_USER}
+  PRETIX_MAIL_PASSWORD: ${MAIL_PASSWORD}
+  PRETIX_MAIL_PORT: ${MAIL_PORT}
+  PRETIX_MAIL_TLS: ${MAIL_TLS}
+  PRETIX_METRICS_USER: ${METRICS_USER}
+  PRETIX_METRICS_PASSPHRASE: ${METRICS_PASSWORD}
+
 services:
-  app:
-    build: ./app
-    command: all
-    ports:
-      - "8676:80"
-    environment:
-      - PRETIX_PRETIX_URL=${URL}
-      - PRETIX_DATABASE_NAME=${DATABASE_NAME}
-      - PRETIX_DATABASE_USER=${DATABASE_USER}
-      - PRETIX_DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      - PRETIX_MAIL_FROM=${MAIL_ADDRESS}
-      - PRETIX_MAIL_HOST=${MAIL_HOST}
-      - PRETIX_MAIL_USER=${MAIL_USER}
-      - PRETIX_MAIL_PASSWORD=${MAIL_PASSWORD}
-      - PRETIX_MAIL_PORT=${MAIL_PORT}
-      - PRETIX_MAIL_TLS=${MAIL_TLS}
-      - PRETIX_METRICS_USER=${METRICS_USER}
-      - PRETIX_METRICS_PASSPHRASE=${METRICS_PASSWORD}
+  init:
+    image: pretix/standalone:2024.7.0
+    environment: *pretix-environment
+    command: ["migrate"]
     volumes:
-      - ./app/data:/data
-      - ./app/pretix.cfg:/etc/pretix/pretix.cfg
+      - ./app/pretix.cfg:/etc/pretix/pretix.cfg:ro
     networks:
       - pretix
+    depends_on:
+      - postgres
+      - redis
+    profiles:
+      - init
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    labels:
+      ofelia.enabled: true
+      ofelia.job-exec.runperiodic.command: pretix cron
+      ofelia.job-exec.runperiodic.schedule: "@every 30m"
+      traefik.enable: true
+      traefik.http.routers.app.entrypoints: websecure
+      traefik.http.routers.app.rule: Host("${URL}")
+      traefik.http.routers.app.tls: true
+      traefik.http.routers.app.tls.certresolver: letsencrypt
+    environment: *pretix-environment
+    volumes:
+      - ./app/data:/data
+      - ./app/pretix.cfg:/etc/pretix/pretix.cfg:ro
+    networks:
+      - pretix
+      - traefik
     depends_on:
       - postgres
       - redis
     restart: unless-stopped
 
   postgres:
-    image: postgres:16.0-alpine
+    image: postgres:17-alpine
     environment:
-      - POSTGRES_DB=${DATABASE_NAME}
-      - POSTGRES_USER=${DATABASE_USER}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - ./db/data:/var/lib/postgresql/data
     networks:
@@ -40,10 +64,35 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     networks:
       - pretix
     restart: unless-stopped
 
+  ofelia:
+    image: mcuadros/ofelia:0.3
+    command: daemon --docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.5
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/data/letsencrypt:/letsencrypt
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - traefik
+    restart: unless-stopped
+
 networks:
   pretix:
+  traefik:

@@ -1,0 +1,23 @@
+api:
+  dashboard: false
+
+entrypoints:
+  web:
+    address: :80
+    http:
+      redirections:
+        entrypoint:
+          scheme: https
+          to: websecure
+  websecure:
+    address: :443
+
+certificatesresolvers:
+  letsencrypt:
+    acme:
+      storage: /letsencrypt/acme.json
+      tlschallenge: true
+
+providers:
+  docker:
+    exposedbydefault: false
