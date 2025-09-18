@@ -10,6 +10,7 @@ x-pretix-environment: &pretix-environment
   PRETIX_MAIL_TLS: ${MAIL_TLS}
   PRETIX_METRICS_USER: ${METRICS_USER}
   PRETIX_METRICS_PASSPHRASE: ${METRICS_PASSWORD}
+  PRETIX_PRETIX_URL: https://${URL}
 
 services:
   init:
@@ -34,18 +35,13 @@ services:
       ofelia.enabled: true
       ofelia.job-exec.runperiodic.command: pretix cron
       ofelia.job-exec.runperiodic.schedule: "@every 30m"
-      traefik.enable: true
-      traefik.http.routers.app.entrypoints: websecure
-      traefik.http.routers.app.rule: Host("${URL}")
-      traefik.http.routers.app.tls: true
-      traefik.http.routers.app.tls.certresolver: letsencrypt
     environment: *pretix-environment
     volumes:
       - ./app/data:/data
       - ./app/pretix.cfg:/etc/pretix/pretix.cfg:ro
     networks:
+      - caddy
       - pretix
-      - traefik
     depends_on:
       - postgres
       - redis
@@ -78,21 +74,20 @@ services:
       - app
     restart: unless-stopped
 
-  traefik:
-    image: traefik:v3.5
+  caddy:
+    image: caddy:2.10-alpine
     ports:
       - "80:80"
       - "443:443"
     environment:
-      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: ${ACME_EMAIL}
+      EMAIL: ${ACME_EMAIL}
+      URL: ${URL}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/data/letsencrypt:/letsencrypt
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
-      - traefik
+      - caddy
     restart: unless-stopped
 
 networks:
+  caddy:
   pretix:
-  traefik:

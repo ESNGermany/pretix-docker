@@ -1,0 +1,7 @@
+{
+    email ${EMAIL}
+}
+
+{$URL} {
+    reverse_proxy http://app
+}
