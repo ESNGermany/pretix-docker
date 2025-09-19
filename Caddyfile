@@ -4,4 +4,11 @@
 
 {$URL} {
     reverse_proxy http://app
+
+    tls {
+        curves x25519 secp256r1 secp384r1
+        protocols tls1.3
+    }
+
+    header Strict-Transport-Security "max-age=63072000"
 }
