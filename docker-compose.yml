@@ -16,11 +16,12 @@ services:
   init:
     image: pretix/standalone:2024.7.0
     environment: *pretix-environment
-    command: ["migrate"]
+    command: migrate
     volumes:
       - ./app/pretix.cfg:/etc/pretix/pretix.cfg:ro
     networks:
-      - pretix
+      - postgres
+      - redis
     depends_on:
       - postgres
       - redis
@@ -41,7 +42,8 @@ services:
       - ./app/pretix.cfg:/etc/pretix/pretix.cfg:ro
     networks:
       - caddy
-      - pretix
+      - postgres
+      - redis
     depends_on:
       - postgres
       - redis
@@ -56,13 +58,13 @@ services:
     volumes:
       - ./db/data:/var/lib/postgresql/data
     networks:
-      - pretix
+      - postgres
     restart: unless-stopped
 
   redis:
     image: redis:8-alpine
     networks:
-      - pretix
+      - redis
     restart: unless-stopped
 
   ofelia:
@@ -70,8 +72,6 @@ services:
     command: daemon --docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - app
     restart: unless-stopped
 
   caddy:
@@ -88,6 +88,33 @@ services:
       - caddy
     restart: unless-stopped
 
+  restic:
+    build:
+      context: ./restic
+      dockerfile: Dockerfile
+    labels:
+      ofelia.enabled: true
+      ofelia.job-exec.backup.command: sh /scripts/backup.sh
+      ofelia.job-exec.backup.schedule: 0 3 * * *
+      ofelia.job-exec.prune.command: restic forget --keep-daily 30 --prune
+      ofelia.job-exec.prune.schedule: 0 15 * * *
+    environment:
+      RESTIC_REPOSITORY: ${BACKUP_REPOSITORY}
+      RESTIC_PASSWORD: ${BACKUP_PASSWORD}
+      PGDATABASE: ${DATABASE_NAME}
+      PGUSER: ${DATABASE_USER}
+      PGPASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - ./app:/app
+      - ./app/data:/data:ro
+      - ./restic/scripts:/scripts:ro
+    networks:
+      - postgres
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 networks:
   caddy:
-  pretix:
+  postgres:
+  redis:
