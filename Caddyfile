@@ -1,5 +1,7 @@
 {
-    email ${EMAIL}
+    email {$EMAIL}
+    admin :2019
+    metrics
 }
 
 {$URL} {
@@ -11,4 +13,11 @@
     }
 
     header Strict-Transport-Security "max-age=63072000"
+}
+
+:8080 {
+    reverse_proxy http://app {
+        header_up Host {$URL}
+        header_up Authorization "Basic {$METRICS_TOKEN}"
+    }
 }

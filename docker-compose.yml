@@ -43,6 +43,7 @@ services:
     networks:
       - caddy
       - postgres
+      - prometheus
       - redis
     depends_on:
       - postgres
@@ -79,19 +80,29 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    command: >
+      sh -c "
+        export METRICS_TOKEN=$$(echo -n "$$METRICS_USER:$$METRICS_PASSWORD" | base64)
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+      "
     environment:
       EMAIL: ${ACME_EMAIL}
+      METRICS_USER: ${METRICS_USER}
+      METRICS_PASSWORD: ${METRICS_PASSWORD}
       URL: ${URL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       - caddy
+      - prometheus
     restart: unless-stopped
 
   restic:
     build:
       context: ./restic
       dockerfile: Dockerfile
+    hostname: restic
+    init: true
     labels:
       ofelia.enabled: true
       ofelia.job-exec.backup.command: sh /scripts/backup.sh
@@ -114,7 +125,55 @@ services:
       - postgres
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - prometheus
+    restart: unless-stopped
+
+  postgres_exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_URI: postgres/postgres?sslmode=disable
+      DATA_SOURCE_USER: ${DATABASE_USER}
+      DATA_SOURCE_PASS: ${DATABASE_PASSWORD}
+    networks:
+      - postgres
+      - prometheus
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.77.0-alpine
+    environment:
+      REDIS_ADDR: redis
+    networks:
+      - prometheus
+      - redis
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  restic_exporter:
+    image: ngosang/restic-exporter:1.7.0
+    init: true
+    environment:
+      RESTIC_REPOSITORY: ${BACKUP_REPOSITORY}
+      RESTIC_PASSWORD: ${BACKUP_PASSWORD}
+      REFRESH_INTERVAL: 21600
+    networks:
+      - prometheus
+    depends_on:
+      - restic
+    restart: unless-stopped
+
 networks:
   caddy:
   postgres:
+  prometheus:
   redis:
