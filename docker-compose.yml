@@ -119,6 +119,8 @@ services:
       - ./app:/app
       - ./app/data:/data:ro
       - ./restic/scripts:/scripts:ro
+      - ${BACKUP_SSH_PRIVATE_KEY}:/root/.ssh/id_ed25519:ro
+      - ${BACKUP_SSH_KNOWN_HOSTS}:/root/.ssh/known_hosts:ro
     networks:
       - postgres
     depends_on:
