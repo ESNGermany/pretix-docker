@@ -167,9 +167,11 @@ services:
     environment:
       RESTIC_REPOSITORY: ${BACKUP_REPOSITORY}
       RESTIC_PASSWORD: ${BACKUP_PASSWORD}
-      REFRESH_INTERVAL: 21600
+      REFRESH_INTERVAL: 3600
     volumes:
       - ./restic/data:/restic-repo:ro
+      - ${BACKUP_SSH_PRIVATE_KEY}:/root/.ssh/id_ed25519:ro
+      - ${BACKUP_SSH_KNOWN_HOSTS}:/root/.ssh/known_hosts:ro
     networks:
       - prometheus
     depends_on:
