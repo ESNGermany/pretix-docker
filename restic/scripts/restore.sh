@@ -4,5 +4,5 @@ while ! pg_isready -q; do
 done
 
 restic dump --tag db latest db.dump | pg_restore -d "$PGDATABASE"
-restic restore --tag app latest --target /app
+restic restore --tag app latest --target /
 restic restore --tag env latest --target /
