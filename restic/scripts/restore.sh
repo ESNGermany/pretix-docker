@@ -5,3 +5,4 @@ done
 
 restic dump --tag db latest db.dump | pg_restore -d "$PGDATABASE"
 restic restore --tag app latest --target /app
+restic restore --tag env latest --target /
