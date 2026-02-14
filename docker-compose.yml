@@ -138,7 +138,7 @@ services:
     image: prom/prometheus:v3.5.0
     volumes:
       - prometheus:/prometheus
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - prometheus
     restart: unless-stopped
@@ -147,11 +147,11 @@ services:
     image: quay.io/prometheus/node-exporter:v1.10.2
     pid: host
     command:
-      - '--path.rootfs=/host'
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
+      - --path.rootfs=/host
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
     volumes:
-      - '/:/host:ro,rslave'
+      - /:/host:ro,rslave
     networks:
       - prometheus
     restart: unless-stopped

@@ -2,7 +2,6 @@
 !/app/data/.gitkeep
 /caddy/data
 /db/data/
-/prometheus/data
 /redis/data
 /restic/data/
 .env
