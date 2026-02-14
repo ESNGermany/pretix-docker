@@ -64,6 +64,8 @@ services:
 
   redis:
     image: redis:8-alpine
+    volumes:
+      - ./redis/data:/data
     networks:
       - redis
     restart: unless-stopped
@@ -80,6 +82,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     command: >
       sh -c "
         export METRICS_TOKEN=$$(echo -n "$$METRICS_USER:$$METRICS_PASSWORD" | base64)
@@ -91,7 +94,9 @@ services:
       METRICS_PASSWORD: ${METRICS_PASSWORD}
       URL: ${URL}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/conf:/etc/caddy:ro
+      - ./caddy/data/config:/config:ro
+      - ./caddy/data/data:/data
     networks:
       - caddy
       - prometheus
@@ -132,7 +137,8 @@ services:
   prometheus:
     image: prom/prometheus:v3.5.0
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     networks:
       - prometheus
     restart: unless-stopped
