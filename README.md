@@ -132,6 +132,7 @@ Monitored metrics include:
 - Redis cache
 - Caddy reverse proxy
 - Restic backup status
+- **Host System**: CPU, RAM, Disk usage (via Node Exporter)
 
 ## Architecture
 
@@ -148,6 +149,7 @@ Monitored metrics include:
 - **postgres_exporter**: PostgreSQL metrics
 - **redis_exporter**: Redis metrics
 - **restic_exporter**: Backup metrics
+- **node_exporter**: Host system metrics (CPU, Memory, Disk)
 
 ### Networks
 
